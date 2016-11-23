@@ -2,12 +2,14 @@ import argparse
 import sys
 import os
 import ipdb
+import re
 from datetime import datetime
 
 
 def valid_datetime(timestamp):
+    DATETIME_FORMAT = '%d-%m-%Y_%H-%M-%S'
     try:
-        return datetime.strptime(timestamp, '%d-%m-%Y_%H-%M-%S')
+        return datetime.strptime(timestamp, DATETIME_FORMAT)
     except ValueError:
         msg = "Given timestamp doesn't match expected format': '{0}'.".format(timestamp)
         raise argparse.ArgumentTypeError(msg)
@@ -23,7 +25,7 @@ def valid_file(filename):
 
 def parse_args(args):
     parser = argparse.ArgumentParser(description='uWSGI log parser, returns some basic stats for given time frame')
-    parser.add_argument('filename', type=valid_file, help='a valid uWSGI log filename')
+    parser.add_argument('filename', type=valid_file, help='path to a valid uWSGI log file')
     parser.add_argument('--start', type=valid_datetime, help='format: DD-MM-YYYY_HH-MM-SS')
     parser.add_argument('--end', type=valid_datetime, help='format: DD-MM-YYYY_HH-MM-SS')
     parser_args = parser.parse_args(args)
@@ -33,6 +35,29 @@ def parse_args(args):
     return parser_args
 
 
+class LineParser:
+    DATETIME_FORMAT = '%a %b %d %H:%M:%S %Y'
+    LINE_RE = re.compile(r"""
+        ^\[pid:\s(?P<pid>\d+)\|app:\s(?P<app>\d+)\|req:\s(?P<request_id>\d+\/\d+)\]\s
+        (?P<ip>[\d.]+)\s\(.*\)\s
+        \{(?P<request_vars>\d+) \svars\sin\s (?P<request_size>\d+)\sbytes\}\s
+        \[(?P<datetime>.+?)\]\s
+        (?P<request_method>POST|GET|DELETE|PUT|PATCH)\s
+        (?P<request_uri>[^ ]*?)\ =>\ generated\ (?:.*?)\ in\ (?P<response_msecs>\d+)\ msecs\s
+        \(HTTP/[\d.]+\ (?P<response_status>\d+)\)
+        """, re.VERBOSE)
+
+    @classmethod
+    def parse(cls, line):
+        match = cls.LINE_RE.search(line)
+        if match:
+            raw_data = match.groupdict()
+            return {
+                'datetime': datetime.strptime(raw_data['datetime'], cls.DATETIME_FORMAT),
+                'status': raw_data['response_status'],
+                'request_size': int(raw_data['request_size']),
+            }
+
 if __name__ == '__main__':
-    argparser = parse_args(sys.argv[1:])
+    parsed_args = parse_args(sys.argv[1:])
     ipdb.set_trace()
