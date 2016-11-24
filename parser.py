@@ -36,6 +36,18 @@ def parse_args(args):
     return parser_args
 
 
+def humanize(nbytes):
+    suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    if nbytes == 0:
+        return '0 B'
+    i = 0
+    while nbytes >= 1024 and i < len(suffixes)-1:
+        nbytes /= 1024.
+        i += 1
+    f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
+    return '%s %s' % (f, suffixes[i])
+
+
 class LineParser:
     DATETIME_FORMAT = '%a %b %d %H:%M:%S %Y'
     LINE_RE = re.compile(r"""
@@ -84,7 +96,7 @@ class Analyzer:
     def analyze(self):
         first_datetime, last_datetime = None, None
         requests_count = 0
-        twohoundreds_total_size = 0
+        twohoundreds_total_size, twohoundreds_count = 0, 0
         response_status_count = defaultdict(int)
         for log_entry in self.data:
             if log_entry['datetime'] in self.time_frame:
@@ -93,10 +105,12 @@ class Analyzer:
                 response_status_count[log_entry['status']] += 1
                 if log_entry['status'].startswith('2'):
                     twohoundreds_total_size += log_entry['request_size']
+                    twohoundreds_count += 1
                 last_datetime = log_entry['datetime']
         return {
             'requests_count': requests_count,
             '2XX_total_size': twohoundreds_total_size,
+            '2XX_count': twohoundreds_count,
             'response_status_count': response_status_count,
             'first_datetime': first_datetime,
             'last_datetime': last_datetime,
@@ -112,12 +126,23 @@ class Analyzer:
         if not data:
             data = self.analyze()
         msg = ''
-        if data['requests_count'] < 2:
+        requests = data['requests_count']
+        if requests < 2:
             msg = ('In given time frame there were less than two requests made. '
                    'Not every stat is available.')
-            requests = str(data['requests_count'])
             req_per_sec = 'Not available'
-            response_status = str(data['response_status_count'])
+        else:
+            timedelta = data['last_datetime'] - data['first_datetime']
+            req_per_sec = str(round(requests / timedelta.seconds, 3))
+        response_status = str(data['response_status_count'])
+        twohoundreds_avg_size = humanize(data['2XX_total_size'] // data['2XX_count'])
+        return {
+            'msg': msg,
+            'requests': str(requests),
+            'status_count': response_status,
+            'request_per_second': req_per_sec,
+            '2XX_avg_size': twohoundreds_avg_size,
+        }
 
 
 if __name__ == '__main__':

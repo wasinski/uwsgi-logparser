@@ -105,7 +105,7 @@ class TimeFrameTests:
         assert dt in time_frame
 
 
-class AnalyzerTests:
+class AnalyzerAnalyzeTests:
 
     ENTRY_1_DATETIME = datetime(2016, 11, 27, 12, 13, 14)
     ENTRY_2_DATETIME = datetime(2016, 11, 27, 12, 13, 16)
@@ -142,6 +142,7 @@ class AnalyzerTests:
         expected = {
             'requests_count': 0,
             '2XX_total_size': 0,
+            '2XX_count': 0,
             'response_status_count': {},
             'first_datetime': None,
             'last_datetime': None,
@@ -155,6 +156,7 @@ class AnalyzerTests:
         expected = {
             'requests_count': 1,
             '2XX_total_size': 128,
+            '2XX_count': 1,
             'response_status_count': {'200': 1},
             'first_datetime': self.ENTRY_1_DATETIME,
             'last_datetime': self.ENTRY_1_DATETIME,
@@ -168,6 +170,7 @@ class AnalyzerTests:
         expected = {
             'requests_count': 2,
             '2XX_total_size': 256,
+            '2XX_count': 2,
             'response_status_count': {'200': 2},
             'first_datetime': self.ENTRY_1_DATETIME,
             'last_datetime': self.ENTRY_2_DATETIME,
@@ -181,6 +184,7 @@ class AnalyzerTests:
         expected = {
             'requests_count': 3,
             '2XX_total_size': 256,
+            '2XX_count': 2,
             'response_status_count': {'200': 2, '301': 1},
             'first_datetime': self.ENTRY_1_DATETIME,
             'last_datetime': self.ENTRY_3_DATETIME,
@@ -194,8 +198,97 @@ class AnalyzerTests:
         expected = {
             'requests_count': 0,
             '2XX_total_size': 0,
+            '2XX_count': 0,
             'response_status_count': {},
             'first_datetime': None,
             'last_datetime': None,
         }
         assert output == expected
+
+
+class AnalyzerGetOutputStatsTests:
+
+    def test_data_from_one_request(self):
+        STATUS_DICT = {'201': 1}
+        data = {
+            'requests_count': 1,
+            '2XX_total_size': 2048,
+            '2XX_count': 1,
+            'response_status_count': STATUS_DICT,
+            'first_datetime': datetime(2016, 11, 11, 11, 11, 11),
+            'last_datetime': datetime(2016, 11, 11, 11, 11, 11),
+        }
+        expected = {
+            'msg': ('In given time frame there were less than two requests made. '
+                   'Not every stat is available.'),
+            'requests': '1',
+            'status_count': str(STATUS_DICT),
+            'request_per_second': 'Not available',
+            '2XX_avg_size': '2 KB',
+        }
+        analyzer = Analyzer([])
+        out = analyzer.get_output_stats(data)
+        assert out == expected
+
+    def test_data_from_two_requests(self):
+        STATUS_DICT = {'200': 1, '201': 1}
+        data = {
+            'requests_count': 2,
+            '2XX_total_size': 2048,
+            '2XX_count': 2,
+            'response_status_count': STATUS_DICT,
+            'first_datetime': datetime(2016, 11, 11, 11, 11, 11),
+            'last_datetime': datetime(2016, 11, 11, 11, 11, 12),
+        }
+        expected = {
+            'msg': '',
+            'requests': '2',
+            'status_count': str(STATUS_DICT),
+            'request_per_second': '2.0',
+            '2XX_avg_size': '1 KB',
+        }
+        analyzer = Analyzer([])
+        out = analyzer.get_output_stats(data)
+        assert out == expected
+
+    def test_data_from_three_requests(self):
+        STATUS_DICT = {'200': 2, '201': 1}
+        data = {
+            'requests_count': 3,
+            '2XX_total_size': 2048+512,
+            '2XX_count': 3,
+            'response_status_count': STATUS_DICT,
+            'first_datetime': datetime(2016, 11, 11, 11, 11, 11),
+            'last_datetime': datetime(2016, 11, 11, 11, 11, 14),
+        }
+        expected = {
+            'msg': '',
+            'requests': '3',
+            'status_count': str(STATUS_DICT),
+            'request_per_second': '1.0',
+            '2XX_avg_size': '853 B',
+        }
+        analyzer = Analyzer([])
+        out = analyzer.get_output_stats(data)
+        assert out == expected
+
+    def test_data_from_four_requests(self):
+        STATUS_DICT = {'200': 2, '201': 1, '400': 1}
+        data = {
+            'requests_count': 4,
+            '2XX_total_size': 2048+512,
+            '2XX_count': 3,
+            'response_status_count': STATUS_DICT,
+            'first_datetime': datetime(2016, 11, 11, 11, 11, 11),
+            'last_datetime': datetime(2016, 11, 11, 11, 11, 14),
+        }
+        expected = {
+            'msg': '',
+            'requests': '4',
+            'status_count': str(STATUS_DICT),
+            'request_per_second': '1.333',
+            '2XX_avg_size': '853 B',
+        }
+        analyzer = Analyzer([])
+        out = analyzer.get_output_stats(data)
+        assert out == expected
