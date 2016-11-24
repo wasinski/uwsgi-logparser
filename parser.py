@@ -55,9 +55,9 @@ def dict_to_str(d):
 class LineParser:
     DATETIME_FORMAT = '%a %b %d %H:%M:%S %Y'
     LINE_RE = re.compile(r"""
-        ^\[pid:\s(?P<pid>\d+)\|app:\s(?P<app>\d+)\|req:\s(?P<request_id>\d+\/\d+)\]\s
+        ^\[pid:\s(?P<pid>\d+)\|app:\ (?P<app>\d+)\|req:\ (?P<request_id>\d+\/\d+)\]\s
         (?P<ip>[\d.]+)\s\(.*\)\s
-        \{(?P<request_vars>\d+) \svars\sin\s (?P<request_size>\d+)\sbytes\}\s
+        \{(?P<request_vars>\d+) \ vars\ in\  (?P<request_size>\d+)\sbytes\}\s
         \[(?P<datetime>.+?)\]\s
         (?P<request_method>POST|GET|DELETE|PUT|PATCH)\s
         (?P<request_uri>[^ ]*?)\ =>\ generated\ (?P<response_size>\d+)\ bytes\ in\ (?P<response_msecs>\d+)\ msecs\s
@@ -145,7 +145,7 @@ class Analyzer:
         requests = data['requests_count']
         if requests < 2:
             msg = ('In given time frame there were made less than two requests. '
-                   'Stats are unavailable.\n')
+                   'Stats are unavailable.')
             req_per_sec = 'Not available'
             twohoundreds_avg_size = 'Not available'
         else:
@@ -173,5 +173,5 @@ if __name__ == '__main__':
                'Requests per second: {request_per_second}\n'
                'Responses: {status_count}\n'
                'Avg 2XX response size: {2XX_avg_size}\n'
-               '{msg}').format(**stats)
-    print(message)
+               '{msg}\n').format(**stats)
+    print(message, end='')
