@@ -8,3 +8,5 @@ Currently supports only default uWSGI log format.
 No dependencies - uses only modules from the standard library.
 
 Tests has to be run by Pytest with included `pytest.ini` file.
+
+Use `python -m pytest tests/` (-> this deals with PYTHON_PATH issues).

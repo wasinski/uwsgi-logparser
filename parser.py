@@ -1,54 +1,10 @@
-import argparse
 import sys
-import os
 import re
 from datetime import datetime
 from collections import defaultdict
 
-
-def valid_datetime(timestamp):
-    DATETIME_FORMAT = '%d-%m-%Y_%H-%M-%S'
-    try:
-        return datetime.strptime(timestamp, DATETIME_FORMAT)
-    except ValueError:
-        msg = "Given timestamp doesn't match expected format': '{0}'.".format(timestamp)
-        raise argparse.ArgumentTypeError(msg)
-
-
-def valid_file(filename):
-    if os.path.isfile(filename):
-        return filename
-    else:
-        msg = "File doesn't exist, or isn't a file': '{0}'.".format(filename)
-        raise argparse.ArgumentTypeError(msg)
-
-
-def parse_args(args):
-    parser = argparse.ArgumentParser(description='uWSGI log parser, returns some basic stats for given time frame')
-    parser.add_argument('filename', type=valid_file, help='path to a valid uWSGI log file')
-    parser.add_argument('--start', type=valid_datetime, help='format: DD-MM-YYYY_HH-MM-SS')
-    parser.add_argument('--end', type=valid_datetime, help='format: DD-MM-YYYY_HH-MM-SS')
-    parser_args = parser.parse_args(args)
-    if parser_args.start and parser_args.end:
-        if parser_args.start >= parser_args.end:
-            parser.error('End argument should be greater than start')
-    return parser_args
-
-
-def humanize(nbytes):
-    suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-    if nbytes == 0:
-        return '0 B'
-    i = 0
-    while nbytes >= 1024 and i < len(suffixes)-1:
-        nbytes /= 1024.
-        i += 1
-    f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
-    return '%s %s' % (f, suffixes[i])
-
-
-def dict_to_str(d):
-    return '({})'.format(', '.join(['%s: %s' % (key, value) for (key, value) in sorted(d.items())]))
+from cli import parse_args
+from utils import TimeFrame, humanize, dict_to_str
 
 
 class LineParser:
@@ -83,20 +39,6 @@ class LogParser:
     def parse(self, filename):
         with open(filename, 'r') as f:
             yield from map(self.lineparser.parse, f.readlines())
-
-
-class TimeFrame:
-
-    def __init__(self, start, end):
-        self.start = start
-        self.end = end
-
-    def __contains__(self, datetime):
-        if self.start and datetime < self.start:
-            return False
-        if self.end and datetime > self.end:
-            return False
-        return True
 
 
 class Analyzer:
