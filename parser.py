@@ -142,8 +142,8 @@ class Analyzer:
             req_per_sec = 'Not available'
             twohoundreds_avg_size = 'Not available'
         else:
-            timedelta = data['last_datetime'] - data['first_datetime']
-            req_per_sec = str(round(requests / timedelta.seconds, 3))
+            time_delta = data['last_datetime'] - data['first_datetime']
+            req_per_sec = str(round(requests / time_delta.seconds, 3))
             twohoundreds_avg_size = humanize(data['2XX_total_size'] // data['2XX_count'])
         response_status = dict_to_str(data['response_status_count'])
         return {
