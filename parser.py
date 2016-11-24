@@ -58,6 +58,22 @@ class LineParser:
                 'request_size': int(raw_data['request_size']),
             }
 
+
+class TimeFrame:
+
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+
+    def __contains__(self, datetime):
+        in_time_frame = True
+        if self.start and datetime < self.start:
+            in_time_frame = False
+        if self.end and datetime > self.end:
+            in_time_frame = False
+        return in_time_frame
+
+
 if __name__ == '__main__':
     parsed_args = parse_args(sys.argv[1:])
     ipdb.set_trace()
