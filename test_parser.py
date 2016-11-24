@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from io import StringIO
 from unittest.mock import patch
 
-from parser import parse_args, LineParser, TimeFrame, Analyzer
+from parser import parse_args, LineParser, TimeFrame, Analyzer, dict_to_str
 
 
 @pytest.fixture
@@ -115,7 +115,7 @@ class AnalyzerAnalyzeTests:
     def entry_1(self):
         return {
             'datetime': self.ENTRY_1_DATETIME,
-            'request_size': 128,
+            'response_size': 128,
             'status': '200',
         }
 
@@ -123,7 +123,7 @@ class AnalyzerAnalyzeTests:
     def entry_2(self):
         return {
             'datetime': self.ENTRY_2_DATETIME,
-            'request_size': 128,
+            'response_size': 128,
             'status': '200',
         }
 
@@ -131,7 +131,7 @@ class AnalyzerAnalyzeTests:
     def entry_3(self):
         return {
             'datetime': self.ENTRY_3_DATETIME,
-            'request_size': 256,
+            'response_size': 256,
             'status': '301',
         }
 
@@ -219,12 +219,12 @@ class AnalyzerGetOutputStatsTests:
             'last_datetime': datetime(2016, 11, 11, 11, 11, 11),
         }
         expected = {
-            'msg': ('In given time frame there were less than two requests made. '
-                   'Not every stat is available.'),
+            'msg': ('In given time frame there were made less than two requests. '
+                   'Stats are unavailable.'),
             'requests': '1',
-            'status_count': str(STATUS_DICT),
+            'status_count': dict_to_str(STATUS_DICT),
             'request_per_second': 'Not available',
-            '2XX_avg_size': '2 KB',
+            '2XX_avg_size': 'Not available',
         }
         analyzer = Analyzer([])
         out = analyzer.get_output_stats(data)
@@ -243,7 +243,7 @@ class AnalyzerGetOutputStatsTests:
         expected = {
             'msg': '',
             'requests': '2',
-            'status_count': str(STATUS_DICT),
+            'status_count': dict_to_str(STATUS_DICT),
             'request_per_second': '2.0',
             '2XX_avg_size': '1 KB',
         }
@@ -264,7 +264,7 @@ class AnalyzerGetOutputStatsTests:
         expected = {
             'msg': '',
             'requests': '3',
-            'status_count': str(STATUS_DICT),
+            'status_count': dict_to_str(STATUS_DICT),
             'request_per_second': '1.0',
             '2XX_avg_size': '853 B',
         }
@@ -285,7 +285,7 @@ class AnalyzerGetOutputStatsTests:
         expected = {
             'msg': '',
             'requests': '4',
-            'status_count': str(STATUS_DICT),
+            'status_count': dict_to_str(STATUS_DICT),
             'request_per_second': '1.333',
             '2XX_avg_size': '853 B',
         }

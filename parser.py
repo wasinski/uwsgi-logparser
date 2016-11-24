@@ -48,6 +48,10 @@ def humanize(nbytes):
     return '%s %s' % (f, suffixes[i])
 
 
+def dict_to_str(d):
+    return '({})'.format(', '.join(['%s: %s' % (key, value) for (key, value) in sorted(d.items())]))
+
+
 class LineParser:
     DATETIME_FORMAT = '%a %b %d %H:%M:%S %Y'
     LINE_RE = re.compile(r"""
@@ -70,6 +74,16 @@ class LineParser:
                 'status': raw_data['response_status'],
                 'response_size': int(raw_data['response_size']),
             }
+
+
+class LogParser:
+
+    def __init__(self, lineparser):
+        self.lineparser = lineparser
+
+    def parse(self, filename):
+        with open(filename, 'r') as f:
+            yield from map(self.lineparser.parse, f.readlines())
 
 
 class TimeFrame:
@@ -99,12 +113,14 @@ class Analyzer:
         twohoundreds_total_size, twohoundreds_count = 0, 0
         response_status_count = defaultdict(int)
         for log_entry in self.data:
+            if not log_entry:
+                continue
             if log_entry['datetime'] in self.time_frame:
                 first_datetime = first_datetime or log_entry['datetime']
                 requests_count += 1
                 response_status_count[log_entry['status']] += 1
                 if log_entry['status'].startswith('2'):
-                    twohoundreds_total_size += log_entry['request_size']
+                    twohoundreds_total_size += log_entry['response_size']
                     twohoundreds_count += 1
                 last_datetime = log_entry['datetime']
         return {
@@ -128,14 +144,15 @@ class Analyzer:
         msg = ''
         requests = data['requests_count']
         if requests < 2:
-            msg = ('In given time frame there were less than two requests made. '
-                   'Not every stat is available.')
+            msg = ('In given time frame there were made less than two requests. '
+                   'Stats are unavailable.\n')
             req_per_sec = 'Not available'
+            twohoundreds_avg_size = 'Not available'
         else:
             timedelta = data['last_datetime'] - data['first_datetime']
             req_per_sec = str(round(requests / timedelta.seconds, 3))
-        response_status = str(data['response_status_count'])
-        twohoundreds_avg_size = humanize(data['2XX_total_size'] // data['2XX_count'])
+            twohoundreds_avg_size = humanize(data['2XX_total_size'] // data['2XX_count'])
+        response_status = dict_to_str(data['response_status_count'])
         return {
             'msg': msg,
             'requests': str(requests),
@@ -147,4 +164,14 @@ class Analyzer:
 
 if __name__ == '__main__':
     parsed_args = parse_args(sys.argv[1:])
-    ipdb.set_trace()
+    log_parser = LogParser(LineParser)
+    parsed_lines = log_parser.parse(parsed_args.filename)
+    analyzer = Analyzer(parsed_lines, start=parsed_args.start, end=parsed_args.end)
+    stats = analyzer.get_output_stats()
+
+    message = ('Requests: {requests}\n'
+               'Requests per second: {request_per_second}\n'
+               'Responses: {status_count}\n'
+               'Avg 2XX response size: {2XX_avg_size}\n'
+               '{msg}').format(**stats)
+    print(message)
