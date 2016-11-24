@@ -61,7 +61,7 @@ class LineParserTests:
                      ' (1 switches on core 0)')
         expected = {
             'datetime': datetime(2016, 11, 21, 17, 57, 20),
-            'request_size': 917,
+            'response_size': 35830,
             'status': '200',
         }
 

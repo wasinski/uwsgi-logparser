@@ -44,7 +44,7 @@ class LineParser:
         \{(?P<request_vars>\d+) \svars\sin\s (?P<request_size>\d+)\sbytes\}\s
         \[(?P<datetime>.+?)\]\s
         (?P<request_method>POST|GET|DELETE|PUT|PATCH)\s
-        (?P<request_uri>[^ ]*?)\ =>\ generated\ (?:.*?)\ in\ (?P<response_msecs>\d+)\ msecs\s
+        (?P<request_uri>[^ ]*?)\ =>\ generated\ (?P<response_size>\d+)\ bytes\ in\ (?P<response_msecs>\d+)\ msecs\s
         \(HTTP/[\d.]+\ (?P<response_status>\d+)\)
         """, re.VERBOSE)
 
@@ -56,7 +56,7 @@ class LineParser:
             return {
                 'datetime': datetime.strptime(raw_data['datetime'], cls.DATETIME_FORMAT),
                 'status': raw_data['response_status'],
-                'request_size': int(raw_data['request_size']),
+                'response_size': int(raw_data['response_size']),
             }
 
 
@@ -90,9 +90,9 @@ class Analyzer:
             if log_entry['datetime'] in self.time_frame:
                 first_datetime = first_datetime or log_entry['datetime']
                 requests_count += 1
+                response_status_count[log_entry['status']] += 1
                 if log_entry['status'].startswith('2'):
                     twohoundreds_total_size += log_entry['request_size']
-                response_status_count[log_entry['status']] += 1
                 last_datetime = log_entry['datetime']
         return {
             'requests_count': requests_count,
