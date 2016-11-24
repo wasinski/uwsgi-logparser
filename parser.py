@@ -80,43 +80,45 @@ class Analyzer:
     def __init__(self, parsed_data, start=None, end=None):
         self.data = parsed_data
         self.time_frame = TimeFrame(start, end)
-        self._first = None
-        self.last = None
-
-    @property
-    def first(self):
-        return self._first
-
-    @first.setter
-    def first(self, val):
-        if self._first is None:
-            self._first = val
 
     def analyze(self):
         first_datetime, last_datetime = None, None
         requests_count = 0
-        requests_total_size = 0
-        requests_status_count = defaultdict(int)
+        twohoundreds_total_size = 0
+        response_status_count = defaultdict(int)
         for log_entry in self.data:
             if log_entry['datetime'] in self.time_frame:
                 first_datetime = first_datetime or log_entry['datetime']
                 requests_count += 1
-                requests_total_size += log_entry['request_size']
-                requests_status_count[log_entry['status']] += 1
+                if log_entry['status'].startswith('2'):
+                    twohoundreds_total_size += log_entry['request_size']
+                response_status_count[log_entry['status']] += 1
                 last_datetime = log_entry['datetime']
         return {
             'requests_count': requests_count,
-            'requests_total_size': requests_total_size,
-            'response_status_count': requests_status_count,
+            '2XX_total_size': twohoundreds_total_size,
+            'response_status_count': response_status_count,
             'first_datetime': first_datetime,
             'last_datetime': last_datetime,
         }
 
-    def get_timedelta(self, first, last):
-        if first and last:
-            return last - first
+    def get_timedelta(self, start, end):
+        if start and end:
+            return end - start
         else:
             return timedelta(0)
+
+    def get_output_stats(self, data=None):
+        if not data:
+            data = self.analyze()
+        msg = ''
+        if data['requests_count'] < 2:
+            msg = ('In given time frame there were less than two requests made. '
+                   'Not every stat is available.')
+            requests = str(data['requests_count'])
+            req_per_sec = 'Not available'
+            response_status = str(data['response_status_count'])
+
 
 if __name__ == '__main__':
     parsed_args = parse_args(sys.argv[1:])

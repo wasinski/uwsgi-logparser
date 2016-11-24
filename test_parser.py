@@ -132,7 +132,7 @@ class AnalyzerTests:
         return {
             'datetime': self.ENTRY_3_DATETIME,
             'request_size': 256,
-            'status': '201',
+            'status': '301',
         }
 
     def test_no_entry_given(self):
@@ -141,7 +141,7 @@ class AnalyzerTests:
         output = analyzer.analyze()
         expected = {
             'requests_count': 0,
-            'requests_total_size': 0,
+            '2XX_total_size': 0,
             'response_status_count': {},
             'first_datetime': None,
             'last_datetime': None,
@@ -154,7 +154,7 @@ class AnalyzerTests:
         output = analyzer.analyze()
         expected = {
             'requests_count': 1,
-            'requests_total_size': 128,
+            '2XX_total_size': 128,
             'response_status_count': {'200': 1},
             'first_datetime': self.ENTRY_1_DATETIME,
             'last_datetime': self.ENTRY_1_DATETIME,
@@ -167,7 +167,7 @@ class AnalyzerTests:
         output = analyzer.analyze()
         expected = {
             'requests_count': 2,
-            'requests_total_size': 256,
+            '2XX_total_size': 256,
             'response_status_count': {'200': 2},
             'first_datetime': self.ENTRY_1_DATETIME,
             'last_datetime': self.ENTRY_2_DATETIME,
@@ -180,8 +180,8 @@ class AnalyzerTests:
         output = analyzer.analyze()
         expected = {
             'requests_count': 3,
-            'requests_total_size': 512,
-            'response_status_count': {'200': 2, '201': 1},
+            '2XX_total_size': 256,
+            'response_status_count': {'200': 2, '301': 1},
             'first_datetime': self.ENTRY_1_DATETIME,
             'last_datetime': self.ENTRY_3_DATETIME,
         }
@@ -193,7 +193,7 @@ class AnalyzerTests:
         output = analyzer.analyze()
         expected = {
             'requests_count': 0,
-            'requests_total_size': 0,
+            '2XX_total_size': 0,
             'response_status_count': {},
             'first_datetime': None,
             'last_datetime': None,
