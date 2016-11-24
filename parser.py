@@ -93,12 +93,11 @@ class TimeFrame:
         self.end = end
 
     def __contains__(self, datetime):
-        in_time_frame = True
         if self.start and datetime < self.start:
-            in_time_frame = False
+            return False
         if self.end and datetime > self.end:
-            in_time_frame = False
-        return in_time_frame
+            return False
+        return True
 
 
 class Analyzer:
