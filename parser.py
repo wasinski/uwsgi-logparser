@@ -131,12 +131,6 @@ class Analyzer:
             'last_datetime': last_datetime,
         }
 
-    def get_timedelta(self, start, end):
-        if start and end:
-            return end - start
-        else:
-            return timedelta(0)
-
     def get_output_stats(self, data=None):
         if not data:
             data = self.analyze()
