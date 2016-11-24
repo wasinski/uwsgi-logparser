@@ -1,10 +1,10 @@
 import pytest
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import StringIO
 from unittest.mock import patch
 
-from parser import parse_args, LineParser, TimeFrame
+from parser import parse_args, LineParser, TimeFrame, Analyzer
 
 
 @pytest.fixture
@@ -103,3 +103,99 @@ class TimeFrameTests:
     def test_datetime_is_in_between(self, time_frame):
         dt = datetime(2016, 11, 27, 12, 13, 14)
         assert dt in time_frame
+
+
+class AnalyzerTests:
+
+    ENTRY_1_DATETIME = datetime(2016, 11, 27, 12, 13, 14)
+    ENTRY_2_DATETIME = datetime(2016, 11, 27, 12, 13, 16)
+    ENTRY_3_DATETIME = datetime(2016, 11, 27, 12, 13, 19)
+
+    @pytest.fixture(scope='class')
+    def entry_1(self):
+        return {
+            'datetime': self.ENTRY_1_DATETIME,
+            'request_size': 128,
+            'status': '200',
+        }
+
+    @pytest.fixture(scope='class')
+    def entry_2(self):
+        return {
+            'datetime': self.ENTRY_2_DATETIME,
+            'request_size': 128,
+            'status': '200',
+        }
+
+    @pytest.fixture(scope='class')
+    def entry_3(self):
+        return {
+            'datetime': self.ENTRY_3_DATETIME,
+            'request_size': 256,
+            'status': '201',
+        }
+
+    def test_no_entry_given(self):
+        data = iter([])
+        analyzer = Analyzer(data)
+        output = analyzer.analyze()
+        expected = {
+            'requests_count': 0,
+            'requests_total_size': 0,
+            'response_status_count': {},
+            'first_datetime': None,
+            'last_datetime': None,
+        }
+        assert output == expected
+
+    def test_just_one_entry_given(self, entry_1):
+        data = iter([entry_1])
+        analyzer = Analyzer(data)
+        output = analyzer.analyze()
+        expected = {
+            'requests_count': 1,
+            'requests_total_size': 128,
+            'response_status_count': {'200': 1},
+            'first_datetime': self.ENTRY_1_DATETIME,
+            'last_datetime': self.ENTRY_1_DATETIME,
+        }
+        assert output == expected
+
+    def test_two_entries_given(self, entry_1, entry_2):
+        data = iter([entry_1, entry_2])
+        analyzer = Analyzer(data)
+        output = analyzer.analyze()
+        expected = {
+            'requests_count': 2,
+            'requests_total_size': 256,
+            'response_status_count': {'200': 2},
+            'first_datetime': self.ENTRY_1_DATETIME,
+            'last_datetime': self.ENTRY_2_DATETIME,
+        }
+        assert output == expected
+
+    def test_three_entries_given(self, entry_1, entry_2, entry_3):
+        data = iter([entry_1, entry_2, entry_3])
+        analyzer = Analyzer(data)
+        output = analyzer.analyze()
+        expected = {
+            'requests_count': 3,
+            'requests_total_size': 512,
+            'response_status_count': {'200': 2, '201': 1},
+            'first_datetime': self.ENTRY_1_DATETIME,
+            'last_datetime': self.ENTRY_3_DATETIME,
+        }
+        assert output == expected
+
+    def test_entries_not_in_given_timeframe(self, entry_1, entry_2, entry_3):
+        data = iter([entry_1, entry_2, entry_3])
+        analyzer = Analyzer(data, end=datetime(2016, 11, 27, 12, 13, 10))
+        output = analyzer.analyze()
+        expected = {
+            'requests_count': 0,
+            'requests_total_size': 0,
+            'response_status_count': {},
+            'first_datetime': None,
+            'last_datetime': None,
+        }
+        assert output == expected

@@ -3,7 +3,8 @@ import sys
 import os
 import ipdb
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
+from collections import defaultdict
 
 
 def valid_datetime(timestamp):
@@ -73,6 +74,49 @@ class TimeFrame:
             in_time_frame = False
         return in_time_frame
 
+
+class Analyzer:
+
+    def __init__(self, parsed_data, start=None, end=None):
+        self.data = parsed_data
+        self.time_frame = TimeFrame(start, end)
+        self._first = None
+        self.last = None
+
+    @property
+    def first(self):
+        return self._first
+
+    @first.setter
+    def first(self, val):
+        if self._first is None:
+            self._first = val
+
+    def analyze(self):
+        first_datetime, last_datetime = None, None
+        requests_count = 0
+        requests_total_size = 0
+        requests_status_count = defaultdict(int)
+        for log_entry in self.data:
+            if log_entry['datetime'] in self.time_frame:
+                first_datetime = first_datetime or log_entry['datetime']
+                requests_count += 1
+                requests_total_size += log_entry['request_size']
+                requests_status_count[log_entry['status']] += 1
+                last_datetime = log_entry['datetime']
+        return {
+            'requests_count': requests_count,
+            'requests_total_size': requests_total_size,
+            'response_status_count': requests_status_count,
+            'first_datetime': first_datetime,
+            'last_datetime': last_datetime,
+        }
+
+    def get_timedelta(self, first, last):
+        if first and last:
+            return last - first
+        else:
+            return timedelta(0)
 
 if __name__ == '__main__':
     parsed_args = parse_args(sys.argv[1:])
