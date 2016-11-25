@@ -1,4 +1,3 @@
-from memory_profiler import profile
 import sys
 import re
 from datetime import datetime
@@ -17,11 +16,15 @@ class LineParser:
         \[(?P<datetime>.+?)\]\s
         (?P<request_method>POST|GET|DELETE|PUT|PATCH)\s
         (?P<request_uri>[^ ]*?)\ =>\ generated\ (?P<response_size>\d+)\ bytes\ in\ (?P<response_msecs>\d+)\ msecs\s
-        \(HTTP/[\d.]+\ (?P<response_status>\d+)\)
+        \(HTTP/[\d.]+\ (?P<response_status>\d\d\d)\)
         """, re.VERBOSE)
 
     @classmethod
     def parse(cls, line):
+        """
+        Parses single line according to given DATETIME_FORMAT and LINE_RE
+        returns: dict with request/response stats OR None when line didn't match
+        """
         match = cls.LINE_RE.search(line)
         if match:
             raw_data = match.groupdict()
@@ -38,6 +41,11 @@ class LogParser:
         self.lineparser = lineparser
 
     def parse(self, filename):
+        """
+        Opens filename inside a context manager.
+        Yields from map object (parse each line)
+        [Using generators through the whole stream of data saves memory]
+        """
         with open(filename, 'r') as f:
             yield from map(self.lineparser.parse, (line for line in f))
 
@@ -45,19 +53,22 @@ class LogParser:
 class Analyzer:
 
     def __init__(self, parsed_data, start=None, end=None):
-        self.data = parsed_data
+        """
+        sets time frame for analysis, and cleans parsed data from lines that
+        didn't have a match
+        """
+        self.data = (parsed for parsed in parsed_data if parsed)
         self.time_frame = TimeFrame(start, end)
 
     def analyze(self):
+        """ sums up stats from the full log and returns it as dict """
         first_datetime, last_datetime = None, None
         requests_count = 0
         twohoundreds_total_size, twohoundreds_count = 0, 0
         response_status_count = defaultdict(int)
         for log_entry in self.data:
-            if not log_entry:
-                continue
             if log_entry['datetime'] in self.time_frame:
-                first_datetime = first_datetime or log_entry['datetime']
+                first_datetime = first_datetime or log_entry['datetime']  # sets it only once
                 requests_count += 1
                 response_status_count[log_entry['status']] += 1
                 if log_entry['status'].startswith('2'):
@@ -74,6 +85,7 @@ class Analyzer:
         }
 
     def get_output_stats(self, data=None):
+        """ returns final stats, as dict of strings """
         if not data:
             data = self.analyze()
         requests = data['requests_count']
@@ -89,11 +101,11 @@ class Analyzer:
         }
 
 
-if __name__ == '__main__':
-    parsed_args = parse_args(sys.argv[1:])
+def main():
+    args = parse_args(sys.argv[1:])
     log_parser = LogParser(LineParser)
-    parsed_lines = log_parser.parse(parsed_args.filename)
-    analyzer = Analyzer(parsed_lines, start=parsed_args.start, end=parsed_args.end)
+    parsed_lines = log_parser.parse(args.filename)
+    analyzer = Analyzer(parsed_lines, start=args.start, end=args.end)
     try:
         stats = analyzer.get_output_stats()
     except (TypeError, ZeroDivisionError):
@@ -105,3 +117,7 @@ if __name__ == '__main__':
                    'Responses: {status_count}\n'
                    'Avg 2XX response size: {2XX_avg_size}\n').format(**stats)
         print(message, end='')
+
+
+if __name__ == '__main__':
+    sys.exit(main())
