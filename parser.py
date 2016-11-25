@@ -1,3 +1,4 @@
+from memory_profiler import profile
 import sys
 import re
 from datetime import datetime
@@ -38,7 +39,7 @@ class LogParser:
 
     def parse(self, filename):
         with open(filename, 'r') as f:
-            yield from map(self.lineparser.parse, f.readlines())
+            yield from map(self.lineparser.parse, (line for line in f))
 
 
 class Analyzer:
