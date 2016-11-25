@@ -135,6 +135,11 @@ class AnalyzerAnalyzeTests:
 
 class AnalyzerGetOutputStatsTests:
 
+    def test_no_data(self):
+        analyzer = Analyzer([])
+        with pytest.raises(TypeError):
+            analyzer.get_output_stats({})
+
     def test_data_from_one_request(self):
         STATUS_DICT = {'201': 1}
         data = {
@@ -145,17 +150,9 @@ class AnalyzerGetOutputStatsTests:
             'first_datetime': datetime(2016, 11, 11, 11, 11, 11),
             'last_datetime': datetime(2016, 11, 11, 11, 11, 11),
         }
-        expected = {
-            'msg': ('In given time frame there were made less than two requests. '
-                   'Stats are unavailable.'),
-            'requests': '1',
-            'status_count': dict_to_str(STATUS_DICT),
-            'request_per_second': 'Not available',
-            '2XX_avg_size': 'Not available',
-        }
         analyzer = Analyzer([])
-        out = analyzer.get_output_stats(data)
-        assert out == expected
+        with pytest.raises(ZeroDivisionError):
+            analyzer.get_output_stats(data)
 
     def test_data_from_two_requests(self):
         STATUS_DICT = {'200': 1, '201': 1}
@@ -168,7 +165,6 @@ class AnalyzerGetOutputStatsTests:
             'last_datetime': datetime(2016, 11, 11, 11, 11, 12),
         }
         expected = {
-            'msg': '',
             'requests': '2',
             'status_count': dict_to_str(STATUS_DICT),
             'request_per_second': '2.0',
@@ -189,7 +185,6 @@ class AnalyzerGetOutputStatsTests:
             'last_datetime': datetime(2016, 11, 11, 11, 11, 14),
         }
         expected = {
-            'msg': '',
             'requests': '3',
             'status_count': dict_to_str(STATUS_DICT),
             'request_per_second': '1.0',
@@ -210,7 +205,6 @@ class AnalyzerGetOutputStatsTests:
             'last_datetime': datetime(2016, 11, 11, 11, 11, 14),
         }
         expected = {
-            'msg': '',
             'requests': '4',
             'status_count': dict_to_str(STATUS_DICT),
             'request_per_second': '1.333',

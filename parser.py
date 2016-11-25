@@ -75,20 +75,12 @@ class Analyzer:
     def get_output_stats(self, data=None):
         if not data:
             data = self.analyze()
-        msg = ''
         requests = data['requests_count']
-        if requests < 2:
-            msg = ('In given time frame there were made less than two requests. '
-                   'Stats are unavailable.')
-            req_per_sec = 'Not available'
-            twohoundreds_avg_size = 'Not available'
-        else:
-            time_delta = data['last_datetime'] - data['first_datetime']
-            req_per_sec = str(round(requests / time_delta.seconds, 3))
-            twohoundreds_avg_size = humanize(data['2XX_total_size'] // data['2XX_count'])
+        time_delta = data['last_datetime'] - data['first_datetime']
+        req_per_sec = str(round(requests / time_delta.seconds, 3))
+        twohoundreds_avg_size = humanize(data['2XX_total_size'] // data['2XX_count'])
         response_status = dict_to_str(data['response_status_count'])
         return {
-            'msg': msg,
             'requests': str(requests),
             'status_count': response_status,
             'request_per_second': req_per_sec,
@@ -101,11 +93,14 @@ if __name__ == '__main__':
     log_parser = LogParser(LineParser)
     parsed_lines = log_parser.parse(parsed_args.filename)
     analyzer = Analyzer(parsed_lines, start=parsed_args.start, end=parsed_args.end)
-    stats = analyzer.get_output_stats()
-
-    message = ('Requests: {requests}\n'
-               'Requests per second: {request_per_second}\n'
-               'Responses: {status_count}\n'
-               'Avg 2XX response size: {2XX_avg_size}\n'
-               '{msg}\n').format(**stats)
-    print(message, end='')
+    try:
+        stats = analyzer.get_output_stats()
+    except (TypeError, ZeroDivisionError):
+        print(('It looks like in given time frame there were made less than two requests.\n'
+               'Stats are unavailable.'))
+    else:
+        message = ('Requests: {requests}\n'
+                   'Requests per second: {request_per_second}\n'
+                   'Responses: {status_count}\n'
+                   'Avg 2XX response size: {2XX_avg_size}\n').format(**stats)
+        print(message, end='')
